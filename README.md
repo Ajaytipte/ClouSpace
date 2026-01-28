@@ -145,22 +145,6 @@ The codebase is strictly separated into `cloudspace-backend` for infrastructure 
    npm run dev
    ```
 
-## Future Enhancements
-
-- File Sharing: Implementation of granular permissions for sharing files via unique links.
-- Storage Tiering: Integration with AWS Marketplace for tiered subscription plans.
-- Versioning: Enabling S3 Object Versioning to allow recovery of previous file iterations.
-- Audit Logs: Recording all file mutations to Amazon CloudWatch Logs for security auditing.
-
-## Resume / Portfolio Value
-
-This project demonstrates proficiency in:
-- Full-stack Cloud Development using the AWS ecosystem.
-- Serverless Design Patterns and Event-Driven Architecture.
-- Security Engineering (IAM, JWT, Pre-signed URLs).
-- NoSQL Schema Design for hierarchical data structures.
-- DevOps & CI/CD using cloud-native tools.
-
 ## Author
 
 Ajay Tipte  
