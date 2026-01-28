@@ -1,431 +1,126 @@
-# ☁️ CloudSpace – Cloud Storage with AWS Cognito Authentication
+# CloudSpace
 
-CloudSpace is a premium, Google Drive-inspired cloud storage frontend built with **React (Vite)**, **Tailwind CSS v4**, and **AWS Cognito** for secure authentication. It features a modern, responsive UI with support for both light and dark modes, comprehensive file management, and enterprise-grade authentication.
+A serverless cloud storage platform engineered for secure file management using AWS native services and event-driven architecture.
 
----
+## Live Demo
 
-## ✨ Key Features
+[Live Application Link](https://main.xxxxxxxx.amplifyapp.com)
 
-### 🔐 **AWS Cognito Authentication**
-- ✅ Email + Password authentication
-- ✅ Email verification flow
-- ✅ JWT token management
-- ✅ Protected routes with route guards
-- ✅ Secure logout
-- ✅ Authorization Code + PKCE flow (no client secret required)
-- ✅ Password strength enforcement
-- ✅ User-friendly error handling
+## Key Features
 
-### 📁 **File Management**
-- Upload files to cloud storage
-- Grid/List view toggle for files
-- Folder organization system
-- Recent files with timeline grouping
-- Trash system with restore functionality
-- File preview and download
-- Global upload progress tracking
+- Secure Authentication: Identity management and session control via Amazon Cognito.
+- Pre-signed URL Integration: Secure file uploads and downloads directly to/from S3, bypassing server bottlenecks.
+- Private Object Storage: All files are stored in a non-public S3 bucket with restricted access.
+- Metadata Management: Optimized folder structures and file states managed in DynamoDB.
+- Trash & Recovery System: Soft-delete mechanism allowing users to restore files.
+- Permanent Deletion: Complete removal of assets from both object storage and metadata layers.
+- Storage Analytics: Real-time calculation of used vs. available storage capacity.
+- Scalable Serverless Backend: Fully managed infrastructure that scales automatically with user demand.
 
-### 🎨 **Modern UI/UX**
-- Glassmorphism design effects
-- Premium color palettes
-- Dark/Light mode toggle (persisted)
-- Fully responsive layouts
-- Smooth animations and transitions
-- Beautiful popup alerts
-- SEO optimized with semantic HTML
+## Cloud Architecture Overview
 
-### 📊 **Dashboard Features**
-- Quick stats overview (Files, Storage, Folders, Shares)
-- Storage usage visualization
-- Folder management cards
-- Recent files preview
-- Interactive navigation
+![CloudSpace Architecture](docs/images/cloudspace-architecture.png)
 
----
+The system follows a cloud-native, serverless architecture designed for high availability and cost-optimization.
 
-## 🚀 Getting Started
+Request Flow:
+1. User interacts with the React frontend hosted on AWS Amplify.
+2. Authentication is handled by Amazon Cognito, which returns a JWT (Jason Web Token).
+3. The frontend makes signed requests to Amazon API Gateway, passing the JWT in the Authorization header.
+4. API Gateway validates the token and triggers the appropriate AWS Lambda function.
+5. Lambda functions perform compute logic, interacting with Amazon DynamoDB for metadata and Amazon S3 for object storage.
+6. For downloads, Lambda generates a temporary pre-signed URL, allowing the client to fetch the file directly from S3 via Amazon CloudFront for low-latency delivery.
 
-### Prerequisites
-- Node.js (v18 or higher)
-- npm or yarn
-- AWS Cognito account (already configured)
+Serverless was chosen to eliminate server management overhead, provide built-in high availability across multiple Availability Zones, and ensure a pay-as-you-go cost model.
 
-### Installation
+## AWS Services Used
 
-1. **Clone the repository**
+- AWS Amplify: Hosts the React frontend and manages the CI/CD pipeline for automated deployments.
+- Amazon Cognito: Provides user pool management, secure sign-in, and JWT-based authorization.
+- AWS Lambda: Executes backend logic in a stateless environment using Node.js 24 and ES Modules.
+- Amazon API Gateway: Acts as a RESTful entry point, handling request routing, throttling, and security.
+- Amazon S3: Serves as the durable object store for all user-uploaded files.
+- Amazon DynamoDB: Store for file metadata, folder hierarchies, and user-specific storage configurations.
+- Amazon CloudFront: Content Delivery Network (CDN) used to securely serve files from S3 with low latency.
+- IAM (Identity and Access Management): Enforces the principle of least privilege across all service-to-service interactions.
+
+## Lambda Functions Overview
+
+- cloudspace-download-file: Retrieves file metadata from DynamoDB and generates a temporary, short-lived S3 GET pre-signed URL.
+- cloudspace-generate-upload-url: Validates file requirements and generates an S3 PUT pre-signed URL to allow secure client-side uploads.
+- cloudspace-upload-url: Implementation for durable execution or post-upload processing logic.
+- cloudspace-list-files: Queries DynamoDB for a user's file list, supporting both active and trashed file views.
+- cloudspace-delete-file: Updates the file state to 'isDeleted' in DynamoDB, enabling the trash functionality.
+- cloudspace-restore-file: Reverts the 'isDeleted' flag to false, returning the file to the user's active view.
+- cloudspace-permanent-delete: Orchestrates the physical removal of the object from S3 and the deletion of its metadata from DynamoDB.
+- cloudspace-storage-usage: Aggregates the file sizes for a specific user to report total storage consumption.
+
+## Project Folder Structure
+
+```text
+cloudspace-backend/
+├── lambdas/
+│   ├── cloudspace-download-file/       # Each lambda is isolated with its own package.json
+│   ├── cloudspace-generate-upload-url/ # Ensures clean dependency management
+│   ├── cloudspace-list-files/          # and independent deployment cycles
+│   ├── ...                             
+│   └── _shared/                        # Shared logic for clients (S3/DB), CORS, and Auth
+├── api-gateway/                        # API route definitions and OpenAPI schemas
+├── iam/                                # JSON policy templates for execution roles
+├── env/                                # Environment-specific configuration files
+└── scripts/                            # Build and deployment utilities
+```
+
+Lambdas are isolated into individual directories to minimize deployment package size (cold start optimization) and to allow per-function versioning and dependency control.
+
+## Security & Best Practices
+
+- JWT Authentication: Every API request is verified against Cognito User Pools before execution.
+- Least Privilege IAM: Lambda execution roles are scoped strictly to the specific S3 prefix and DynamoDB partitions required.
+- Private S3 Bucket: Public access is blocked at the bucket level. Access is only granted via temporary pre-signed URLs or CloudFront OAI.
+- Pre-signed URLs: Eliminates the need for the backend to handle large binary streams, reducing memory usage and exposure.
+- CORS Handling: Strict Origin and Header validation implemented via shared middleware.
+
+## Deployment Overview
+
+- Frontend: Automated via AWS Amplify. Pushing to the main branch triggers a build, test, and deployment cycle to the global edge network.
+- Backend: Functions are packaged as ZIP files. Deployment is managed via custom shell scripts or AWS CLI, ensuring environment variables from `env/` are injected into the Lambda context.
+- Environment Variables: Critical configurations (Table Names, S3 Bucket IDs) are decoupled from the code to support multi-stage (Dev/Prod) deployments.
+
+## How to Run Locally (High-level)
+
+1. Clone the repository:
    ```bash
-   git clone <your-repo-url>
-   cd CloudSpace
+   git clone https://github.com/your-username/cloudspace.git
    ```
-
-2. **Install dependencies**
+2. Install dependencies:
    ```bash
    npm install
    ```
-
-3. **Start development server**
+3. Configure Environment Variables:
+   Create a `.env` file in the root and add your AWS region, Cognito Client ID, and API Gateway Endpoint.
+4. Launch the application:
    ```bash
    npm run dev
    ```
 
-4. **Open in browser**
-   ```
-   http://localhost:5173
-   ```
+## Future Enhancements
 
----
+- File Sharing: Implementation of granular permissions for sharing files via unique links.
+- Storage Tiering: Integration with AWS Marketplace for tiered subscription plans.
+- Versioning: Enabling S3 Object Versioning to allow recovery of previous file iterations.
+- Audit Logs: Recording all file mutations to Amazon CloudWatch Logs for security auditing.
 
-## 🔐 AWS Cognito Configuration
+## Resume / Portfolio Value
 
-### Pre-configured Settings
-- **AWS Region**: `ap-south-1` (Mumbai)
-- **User Pool ID**: `ap-south-1_8vQ8smdoZ`
-- **User Pool Web Client ID**: `7vbnfgktemk29lf55up1lo3a4c`
-- **Authentication Flow**: Authorization Code + PKCE
-- **Token Storage**: localStorage (`cloudspace_token`)
+This project demonstrates proficiency in:
+- Full-stack Cloud Development using the AWS ecosystem.
+- Serverless Design Patterns and Event-Driven Architecture.
+- Security Engineering (IAM, JWT, Pre-signed URLs).
+- NoSQL Schema Design for hierarchical data structures.
+- DevOps & CI/CD using cloud-native tools.
 
-### First Time Usage
+## Author
 
-1. **Sign Up** (`/signup`)
-   - Enter name, email, and password
-   - Password must have: 8+ chars, uppercase, lowercase, number, special character
-   - Receive verification code via email
-   - Enter code to verify account
-
-2. **Log In** (`/login`)
-   - Enter email and password
-   - JWT token automatically stored
-   - Redirected to dashboard
-
-3. **Access Protected Routes**
-   - All dashboard routes require authentication
-   - Auto-redirect to login if not authenticated
-
----
-
-## 🛠 Tech Stack
-
-### Frontend
-- **React 19** - Modern UI library
-- **Vite 7** - Lightning-fast build tool
-- **React Router 7** - Client-side routing
-- **Tailwind CSS 4** - Modern CSS-first framework
-
-### Authentication & Backend
-- **AWS Amplify** - AWS SDK for JavaScript
-- **AWS Cognito** - User authentication service
-- **Axios** - HTTP client with JWT interceptors
-
-### UI/UX Libraries
-- **Lucide React** - Beautiful icon library
-- **Framer Motion** - Smooth animations
-- **clsx** - Conditional class names
-- **tailwind-merge** - Merge Tailwind classes
-
-### State Management
-- React Context API (Auth, Theme, File Upload)
-
----
-
-## 📁 Project Structure
-
-```
-CloudSpace/
-├── src/
-│   ├── auth/                    # 🔐 Authentication
-│   │   ├── Login.jsx           # Login page with AWS Cognito
-│   │   ├── Signup.jsx          # Signup with email verification
-│   │   ├── ProtectedRoute.jsx  # Route protection guard
-│   │   └── authUtils.js        # Auth utility functions
-│   ├── components/             # 🧩 Reusable components
-│   │   ├── Navbar.jsx          # Top navigation with user menu
-│   │   └── Sidebar.jsx         # Side navigation
-│   ├── context/                # ⚙️ React Context
-│   │   ├── ThemeContext.jsx    # Dark/light mode
-│   │   └── FileUploadContext.jsx
-│   ├── pages/                  # 📄 Page components
-│   │   ├── Dashboard.jsx       # Home with stats
-│   │   ├── Recent.jsx          # Recent files timeline
-│   │   ├── MyFiles.jsx         # All files grid/list
-│   │   ├── Trash.jsx           # Deleted files
-│   │   ├── Profile.jsx         # User profile
-│   │   └── BuyStorage.jsx      # Storage plans
-│   ├── layouts/                # 🎨 Layout wrappers
-│   │   └── DashboardLayout.jsx
-│   ├── examples/               # 📚 Example code
-│   │   └── ExampleAuthUsage.jsx
-│   ├── aws-config.js           # AWS Amplify configuration
-│   ├── App.jsx                 # Main app & routing
-│   └── main.jsx                # Entry point
-├── public/                     # Static assets
-├── docs/                       # 📚 Documentation
-│   ├── AWS_COGNITO_AUTH_GUIDE.md
-│   ├── TESTING_GUIDE.md
-│   ├── IMPLEMENTATION_SUMMARY.md
-│   ├── QUICK_REFERENCE.md
-│   └── AUTH_FLOW_DIAGRAM.txt
-├── package.json
-├── vite.config.js
-└── tailwind.config.js
-```
-
----
-
-## 📱 Available Routes
-
-### Public Routes
-| Route | Description |
-|-------|-------------|
-| `/login` | Login page with AWS Cognito |
-| `/signup` | Signup with email verification |
-
-### Protected Routes (Authentication Required)
-| Route | Description |
-|-------|-------------|
-| `/` | Dashboard with stats overview |
-| `/my-files` | All files with grid/list view |
-| `/recent` | Recent files with timeline |
-| `/trash` | Deleted files |
-| `/profile` | User profile settings |
-| `/buy-storage` | Storage upgrade plans |
-
----
-
-## 🔑 Authentication API
-
-### Available Functions
-
-```javascript
-import { 
-  getCurrentUser,   // Get logged-in user details
-  getToken,         // Get JWT token
-  isAuthenticated,  // Check auth status
-  signOutUser       // Logout user
-} from './auth/authUtils';
-```
-
-### Usage Examples
-
-**Get Current User**
-```javascript
-const user = await getCurrentUser();
-console.log(user.email, user.name, user.userId);
-// Returns: { userId, username, email, name, emailVerified, tokens }
-```
-
-**Get JWT Token for API Calls**
-```javascript
-const token = getToken();
-fetch('/api/endpoint', {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-```
-
-**Check Authentication Status**
-```javascript
-const authenticated = await isAuthenticated();
-if (authenticated) {
-  // User is logged in
-}
-```
-
-**Logout**
-```javascript
-await signOutUser();
-navigate('/login');
-```
-
----
-
-## 🎯 Available Scripts
-
-```bash
-# Development
-npm run dev      # Start dev server (port 5173)
-
-# Production
-npm run build    # Build for production
-npm run preview  # Preview production build
-
-# Code Quality
-npm run lint     # Run ESLint
-```
-
----
-
-## 🎨 Customization
-
-### Theme Colors
-Edit `tailwind.config.js`:
-```javascript
-colors: {
-  primary: {
-    500: '#3b82f6',
-    600: '#2563eb',
-  }
-}
-```
-
-### Add New Protected Page
-1. Create page in `src/pages/NewPage.jsx`
-2. Add route in `src/App.jsx`:
-```javascript
-<Route path="new-page" element={
-  <Suspense fallback={<PageLoader />}>
-    <NewPage />
-  </Suspense>
-} />
-```
-3. Add link in `src/components/Sidebar.jsx`
-
----
-
-## 🧪 Testing
-
-See `docs/TESTING_GUIDE.md` for comprehensive testing instructions.
-
-**Quick Test:**
-1. Navigate to `/signup`
-2. Create account with real email
-3. Verify email with AWS code
-4. Login at `/login`
-5. Access protected routes
-6. Test logout functionality
-
----
-
-## 📦 Build for Production
-
-```bash
-# Create optimized build
-npm run build
-
-# Preview production build locally
-npm run preview
-```
-
-Output: `dist/` folder ready for deployment
-
----
-
-## 🚀 Deployment
-
-### Vercel (Recommended)
-1. Connect GitHub repository
-2. Deploy automatically
-3. Environment variables auto-configured
-
-### Netlify
-1. Connect repository
-2. Build command: `npm run build`
-3. Publish directory: `dist`
-
-### AWS Amplify Hosting
-```bash
-amplify init
-amplify add hosting
-amplify publish
-```
-
----
-
-## 🔒 Security Features
-
-✅ **No Client Secret** - Frontend-safe configuration  
-✅ **PKCE Flow** - Enhanced security for SPAs  
-✅ **JWT Tokens** - Secure authentication  
-✅ **Email Verification** - Required for signup  
-✅ **Password Requirements** - Strong password enforcement  
-✅ **Auto Token Refresh** - Handled by AWS Amplify  
-✅ **Protected Routes** - Route-level authentication guards  
-✅ **Secure Logout** - Complete session termination  
-
----
-
-## 🐛 Troubleshooting
-
-**Can't sign up**
-- Check password requirements (8+ chars, uppercase, lowercase, number, special char)
-- Verify email format is valid
-
-**Verification code not received**
-- Check spam/junk folder
-- Ensure email is correct
-- Try signing up again
-
-**Can't access protected routes**
-- Make sure you're logged in
-- Check localStorage: `cloudspace_token`
-- Try logout and login again
-
-**Token expired**
-- Tokens auto-refresh via AWS Amplify
-- If issue persists, logout and login
-
----
-
-## 📚 Documentation
-
-Comprehensive guides available in `docs/` folder:
-
-- 📘 **AWS_COGNITO_AUTH_GUIDE.md** - Complete authentication guide
-- 📗 **TESTING_GUIDE.md** - Step-by-step testing instructions
-- 📕 **IMPLEMENTATION_SUMMARY.md** - Implementation details
-- 📙 **QUICK_REFERENCE.md** - Commands, snippets, tips
-- 📊 **AUTH_FLOW_DIAGRAM.txt** - Visual authentication flow
-
----
-
-## 🎯 Roadmap
-
-- [ ] File sharing with public links
-- [ ] Real-time collaboration
-- [ ] Advanced search & filters
-- [ ] File versioning
-- [ ] Mobile app (React Native)
-- [ ] Multi-Factor Authentication (MFA)
-- [ ] Social login (Google, GitHub)
-- [ ] Offline mode with sync
-
----
-
-## 🤝 Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Open a pull request
-
----
-
-## 📄 License
-
-MIT License - Free to use for personal and commercial projects
-
----
-
-## 🙏 Acknowledgments
-
-- **AWS Cognito** - Secure authentication service
-- **Tailwind CSS** - Modern styling framework
-- **Lucide** - Beautiful icon library
-- **React Team** - Amazing framework
-- **Vite** - Lightning-fast build tool
-
----
-
-## 📞 Support
-
-Need help?
-- 📖 Check documentation in `docs/` folder
-- 📝 Review `QUICK_REFERENCE.md`
-- 🐛 Open an issue on GitHub
-- 💬 Join our community
-
----
-
-**Built with ❤️ using React, AWS Cognito, Vite, and Tailwind CSS**
-
-**Start building amazing cloud storage features today! 🚀**
+Ajay Tipte  
+Cloud / Full-Stack Developer

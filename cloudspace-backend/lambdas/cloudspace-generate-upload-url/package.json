@@ -1,0 +1,12 @@
+{
+    "name": "cloudspace-generate-upload-url",
+    "version": "1.0.0",
+    "description": "Lambda to generate signed upload URLs",
+    "main": "index.mjs",
+    "type": "module",
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.0.0",
+        "@aws-sdk/client-dynamodb": "^3.0.0",
+        "@aws-sdk/s3-request-presigner": "^3.0.0"
+    }
+}
