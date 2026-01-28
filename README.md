@@ -148,4 +148,4 @@ The codebase is strictly separated into `cloudspace-backend` for infrastructure 
 ## Author
 
 Ajay Tipte  
-Cloud / Full-Stack Developer
+
