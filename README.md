@@ -4,7 +4,7 @@ A serverless cloud storage platform engineered for secure file management using 
 
 ## Live Demo
 
-[Live Application Link](https://main.xxxxxxxx.amplifyapp.com)
+https://main.xxxxxxxxxxxx.amplifyapp.com
 
 ## Key Features
 
@@ -16,6 +16,17 @@ A serverless cloud storage platform engineered for secure file management using 
 - Permanent Deletion: Complete removal of assets from both object storage and metadata layers.
 - Storage Analytics: Real-time calculation of used vs. available storage capacity.
 - Scalable Serverless Backend: Fully managed infrastructure that scales automatically with user demand.
+
+## Project Implementation
+
+### User Dashboard
+![Dashboard](docs/images/dashboard.png)
+
+### File Management
+![File Manager](docs/images/file-manager.png)
+
+### Recycle Bin (Trash)
+![Recycle Bin](docs/images/trash-view.png)
 
 ## Cloud Architecture Overview
 
@@ -58,20 +69,50 @@ Serverless was chosen to eliminate server management overhead, provide built-in 
 ## Project Folder Structure
 
 ```text
-cloudspace-backend/
-├── lambdas/
-│   ├── cloudspace-download-file/       # Each lambda is isolated with its own package.json
-│   ├── cloudspace-generate-upload-url/ # Ensures clean dependency management
-│   ├── cloudspace-list-files/          # and independent deployment cycles
-│   ├── ...                             
-│   └── _shared/                        # Shared logic for clients (S3/DB), CORS, and Auth
-├── api-gateway/                        # API route definitions and OpenAPI schemas
-├── iam/                                # JSON policy templates for execution roles
-├── env/                                # Environment-specific configuration files
-└── scripts/                            # Build and deployment utilities
+CloudSpace/
+├── cloudspace-backend/             # AWS Serverless Backend
+│   ├── api-gateway/                # API definitions (OpenAPI/Swagger)
+│   ├── env/                        # Environment configurations (dev/prod)
+│   ├── iam/                        # IAM execution roles and policies
+│   ├── lambdas/                    # Node.js Lambda Functions
+│   │   ├── cloudspace-delete-file/
+│   │   ├── cloudspace-download-url/
+│   │   ├── cloudspace-list-files/
+│   │   ├── cloudspace-restore-file/
+│   │   ├── cloudspace-storage-usage/
+│   │   ├── cloudspace-permanent-delete/
+│   │   └── _shared/                # Shared utilities (S3, DynamoDB, CORS)
+│   ├── scripts/                    # Deployment and build scripts
+│   └── README.md
+├── docs/                           # Documentation and images
+│   └── images/                     # Architecture and UI screenshots
+├── public/                         # Static assets for React
+├── src/                            # Frontend Source (React + Vite)
+│   ├── api.js                      # Centralized API service layer
+│   ├── auth/                       # Cognito auth utilities
+│   ├── components/                 # Reusable UI components
+│   │   ├── Navbar.jsx
+│   │   ├── Sidebar.jsx
+│   │   ├── FileCard.jsx
+│   │   ├── FilePreview.jsx
+│   │   └── StorageBar.jsx
+│   ├── context/                    # Theme and Auth context providers
+│   ├── layouts/                    # Common page layouts
+│   ├── pages/                      # Main application views
+│   │   ├── Dashboard.jsx
+│   │   ├── MyFiles.jsx
+│   │   ├── Trash.jsx
+│   │   ├── BuyStorage.jsx
+│   │   └── Profile.jsx
+│   ├── App.jsx                     # Main routing and entry component
+│   └── main.jsx                    # Vite initialization
+├── index.html                      # Entry HTML
+├── package.json                    # Frontend dependencies
+├── vite.config.js                  # Vite configuration
+└── README.md                       # Project documentation
 ```
 
-Lambdas are isolated into individual directories to minimize deployment package size (cold start optimization) and to allow per-function versioning and dependency control.
+The codebase is strictly separated into `cloudspace-backend` for infrastructure logic and `src` for the user interface, ensuring a clean decoupling of the presentation and compute layers.
 
 ## Security & Best Practices
 
